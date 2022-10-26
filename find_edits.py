@@ -1,5 +1,7 @@
+#!/usr/bin/env python3
 import numpy as np
 from itertools import product
+from argparse import ArgumentParser
 from pdb import set_trace as brk
 
 
@@ -100,7 +102,12 @@ def patterns(n=6):
 
 
 def main():
-	genomes = load("input.fasta")
+	ap = ArgumentParser()
+	ap.add_argument("fname", nargs=1)
+	args = ap.parse_args()
+
+	genomes = load(args.fname[0])
+
 	for p in patterns():
 		print(p, score(genomes, p))
 
