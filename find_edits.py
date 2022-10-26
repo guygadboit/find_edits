@@ -76,10 +76,16 @@ def differences(sl):
 
 
 def score(genomes, pattern):
-	ret = 1
+	ret = 0
+	count = 0
 	for sl in locate(genomes, pattern):
-		ret *= differences(sl)
-	return ret
+		ret += differences(sl)
+		count += 1
+
+	if count:
+		return float(ret) / count
+	else:
+		return 0.0
 
 
 def patterns(n=6):
