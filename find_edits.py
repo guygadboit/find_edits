@@ -135,21 +135,24 @@ def eliminate_non_silent(genomes):
 	for codon_sl in codon_slices(genomes):
 		reference = translate_codon(codon_sl[0])
 
-		for i in range(1, genomes.shape[1]):
-			residue = translate_codon(genomes[i, :])
+		for i in range(1, genomes.shape[0]):
+			residue = translate_codon(codon_sl[i])
 			if residue != reference:
 				# Non-silent mutation. So pretend it isn't a mutation at all
-				codon_sl[i, :] = codon_sl[0, :]
+				codon_sl[i] = codon_sl[0]
 
 
 def main():
 	ap = ArgumentParser()
 	ap.add_argument("fname", nargs=1)
+	ap.add_argument('-s', "--silent", action="store_true")
 	args = ap.parse_args()
 
 	genomes = load(args.fname[0])
-	eliminate_non_silent(genomes)
-	return
+
+	if args.silent:
+		print("Eliminating non-silent mutations")
+		eliminate_non_silent(genomes)
 
 	for p in patterns():
 		print(p, score(genomes, p))
