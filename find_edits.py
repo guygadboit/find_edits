@@ -104,7 +104,7 @@ def patterns(n=6):
 
 def get_triplet(row, i):
 	"""Find the next triplet (skipping gaps) in the first row starting from i.
-	Return the triplet and an updated i"""
+	Return the triplet and the position of the end of it"""
 	t = ''
 	while i < len(row):
 		c = chr(row[i])
@@ -116,7 +116,6 @@ def get_triplet(row, i):
 			return t, i
 
 		i += 1
-
 	raise StopIteration
 
 
