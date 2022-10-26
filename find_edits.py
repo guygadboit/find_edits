@@ -102,41 +102,63 @@ def patterns(n=6):
 		yield "".join(pat)
 
 
+def get_triplet(row, i):
+	"""Find the next triplet (skipping gaps) in the first row starting from i.
+	Return the triplet and an updated i"""
+	t = ''
+	while i < len(row):
+		c = chr(row[i])
+
+		if c != '-':
+			t += c
+
+		if len(t) == 3:
+			return t, i
+
+		i += 1
+
+	raise StopIteration
+
+
 def codon_slices(genomes):
-	"""Generate slices corresponding to codons in the first sequence"""
+	"""Generate slices corresponding to codons in the first row"""
 	i, n = 0, genomes.shape[1]
 
 	count = 0
 	start = 0
 
+	reading = False
+
 	while True:
-		nt = chr(genomes[0][i])
-		i += 1
+		if not reading:
+			# Skip one nt at a time until we find the start codon
+			t, _ = get_triplet(genomes[0], i)
+			r = get_residue(t)
+			i += 1
 
-		if nt != '-':
-			count += 1
+			if r == 'M':
+				reading = True
+				i += 2	# skip to the end of the M codon itself
+				continue
+		else:	# We are reading
+			codon, j = get_triplet(genomes[0], i)
+			yield codon, genomes[:, i:j]
+			i = j + 1
 
-		if count == 3:
-			count = 0
-			yield genomes[:, start:i]
-			start = i
-
-		if i == n: break
-
-
-def translate_codon(nts):
-	codon = [chr(x) for x in nts]
-	codon = "".join([x for x in codon if x != '-'])
-	return get_residue(codon)
+			if codon == '*':
+				reading = False
 
 
 def eliminate_non_silent(genomes):
 	"""Remove any mutations that aren't silent"""
-	for codon_sl in codon_slices(genomes):
-		reference = translate_codon(codon_sl[0])
+	reading = False
+
+	for triplet, codon_sl in codon_slices(genomes):
+		reference = get_residue(triplet)
 
 		for i in range(1, genomes.shape[0]):
-			residue = translate_codon(codon_sl[i])
+			codon = "".join([chr(x) for x in codon_sl[i]])
+			residue = get_residue(codon)
 			if residue != reference:
 				# Non-silent mutation. So pretend it isn't a mutation at all
 				codon_sl[i] = codon_sl[0]
@@ -151,7 +173,6 @@ def main():
 	genomes = load(args.fname[0])
 
 	if args.silent:
-		print("Eliminating non-silent mutations")
 		eliminate_non_silent(genomes)
 
 	for p in patterns():
