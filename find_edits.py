@@ -2,6 +2,7 @@
 import numpy as np
 from itertools import product
 from argparse import ArgumentParser
+from translate import get_residue
 from pdb import set_trace as brk
 
 
@@ -101,12 +102,54 @@ def patterns(n=6):
 		yield "".join(pat)
 
 
+def codon_slices(genomes):
+	"""Generate slices corresponding to codons in the first sequence"""
+	i, n = 0, genomes.shape[1]
+
+	count = 0
+	start = 0
+
+	while True:
+		nt = chr(genomes[0][i])
+		i += 1
+
+		if nt != '-':
+			count += 1
+
+		if count == 3:
+			count = 0
+			yield genomes[:, start:i]
+			start = i
+
+		if i == n: break
+
+
+def translate_codon(nts):
+	codon = [chr(x) for x in nts]
+	codon = "".join([x for x in codon if x != '-'])
+	return get_residue(codon)
+
+
+def eliminate_non_silent(genomes):
+	"""Remove any mutations that aren't silent"""
+	for codon_sl in codon_slices(genomes):
+		reference = translate_codon(codon_sl[0])
+
+		for i in range(1, genomes.shape[1]):
+			residue = translate_codon(genomes[i, :])
+			if residue != reference:
+				# Non-silent mutation. So pretend it isn't a mutation at all
+				codon_sl[i, :] = codon_sl[0, :]
+
+
 def main():
 	ap = ArgumentParser()
 	ap.add_argument("fname", nargs=1)
 	args = ap.parse_args()
 
 	genomes = load(args.fname[0])
+	eliminate_non_silent(genomes)
+	return
 
 	for p in patterns():
 		print(p, score(genomes, p))
