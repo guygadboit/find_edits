@@ -31,7 +31,6 @@ def load(fname):
 	for line in lines(fname):
 		if line.startswith('>'):
 			if row is not None:
-
 				if ret is None:
 					ret = row
 				else:

@@ -1,0 +1,26 @@
+This looks in a set of aligned sequences for any patterns 6nt long that look
+like they might have been edited in the first one.
+
+It just looks at each time each pattern appears in any of them and ranks them
+by the average number of differences.
+
+Run it like this:
+
+$ python3 find_edits.py | tee output
+$ sort -rn -k2 output > sorted-output
+
+And then look for any interesting sequences at the top of sorted-output.
+
+The output has been included. sorted-output2 is using the current scoring
+algorithm (ignore sorted-output, or look in the git history to see what it does
+if you're interested).
+
+input.fasta contains the aligned sequences. input.clu is the same thing but in
+a format I find more readable. Those were generated like this:
+
+$ cat WH1.fasta RpYN06.fasta BANAL52.fasta BANAL116.fasta RaTG13.fasta | clustalo -i - > input.fasta
+
+$ cat WH1.fasta RpYN06.fasta BANAL52.fasta BANAL116.fasta RaTG13.fasta | clustalo -i - --outfmt=clu --resno -o input.clu
+
+graph.png is the numbers in sorted-output2 put on a graph with a few
+interesting sequences marked near where they appear.
