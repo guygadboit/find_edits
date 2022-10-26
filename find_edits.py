@@ -9,10 +9,10 @@ def array_from_string(s):
 
 
 def slice_to_string(sl):
+	"""Convert a slice back to a string. We just use this for debugging"""
 	lines = []
 	for row in sl:
 		lines.append("".join([chr(c) for c in row]))
-
 	return "\n".join(lines)
 
 
@@ -24,8 +24,8 @@ def lines(fname):
 
 
 def load(fname):
-	"""Load everything into a big numpy array"""
-
+	"""Load everything into a big numpy array. One genome per row, one
+	nucleotide per column"""
 	row, ret = None, None
 
 	for line in lines(fname):
@@ -50,8 +50,8 @@ def load(fname):
 
 
 def slices(genomes, length):
-	"""Generate all vertical slices length nts long"""
-	for i in range(genomes.shape[1] - 5):
+	"""Generate all vertical slices length nucleotides long."""
+	for i in range(genomes.shape[1] - length - 1):
 		yield genomes[:, i:i+length]
 
 
@@ -76,8 +76,10 @@ def differences(sl):
 
 
 def score(genomes, pattern):
-	ret = 0
-	count = 0
+	"""The average number of differences between the first row and the
+	subsequent ones for each time this pattern appears"""
+	ret, count = 0, 0
+
 	for sl in locate(genomes, pattern):
 		ret += differences(sl)
 		count += 1
