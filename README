@@ -1,3 +1,20 @@
+mutations.py
+============
+
+This looks at odds ratios of silent to non-silent mutations in the sites of
+interest, and all other ~4000 sites, to regions outside of those sites.
+
+$ python3 mutations.py WH1-RaT.fasta
+
+The fasta file should only contain two (aligned) genomes.
+
+This also outputs a clu-style file with the residues in it, called residues.clu
+by default.
+
+
+find_edits.py
+=============
+
 This looks in a set of aligned sequences for any patterns 6nt long that look
 like they might have been edited in the first one.
 
@@ -6,7 +23,7 @@ by the average number of differences.
 
 Run it like this:
 
-$ python3 find_edits.py | tee output
+$ python3 find_edits.py input.fasta | tee output
 $ sort -rn -k2 output > sorted-output
 
 And then look for any interesting sequences at the top of sorted-output.

@@ -158,11 +158,14 @@ def main():
 	with open(args.output, "w") as fp:
 		mm.output_clu(gs.get_name(0), gs.get_name(1), fp)
 
-	for pat in ("CGTCTC", "GAGACC", "GGTCTC", "GAGACG"):
+	interesting = ("CGTCTC", "GAGACC", "GGTCTC", "GAGACG")
+
+	for pat in interesting:
 		print(pat, *mm.silent_mutations_in_sequences((pat,)))
 
 	print("Controls")
 	for pat in patterns():
+		if pat in interesting: continue
 		print(pat, *mm.silent_mutations_in_sequences((pat,)))
 
 
