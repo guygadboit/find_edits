@@ -145,6 +145,8 @@ def main():
 	ap = ArgumentParser()
 	ap.add_argument("fname", nargs=1)
 	ap.add_argument('-o', "--output", type=str, default="residues.clu")
+	ap.add_argument('-n', "--residues-only", action="store_true",
+			help="Just make the residues file")
 	args = ap.parse_args()
 
 	gs = GenomeSet(args.fname[0])
@@ -153,12 +155,15 @@ def main():
 		return
 
 	mm = MutationMap(gs.genomes[0], gs.genomes[1])
-	mm.summary()
 
 	with open(args.output, "w") as fp:
 		mm.output_clu(gs.get_name(0), gs.get_name(1), fp)
 
 	interesting = ("CGTCTC", "GAGACC", "GGTCTC", "GAGACG")
+	if args.residues_only:
+		return
+
+	mm.summary()
 
 	for pat in interesting:
 		print(pat, *mm.silent_mutations_in_sequences((pat,)))
