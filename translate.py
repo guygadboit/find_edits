@@ -1,6 +1,7 @@
 import numpy as np
 from argparse import ArgumentParser
 from load_genomes import GenomeSet
+from copy import *
 from pdb import set_trace as brk
 
 
@@ -94,6 +95,41 @@ CODON_TABLE = {
 	}
 
 
+class Iterator:
+	def __init__(self, frameshifts):
+		"""An iterator but that can jump around a little bit. frameshifts is a
+		dictionary of offsets to relative jumps"""
+		self.frameshifts = frameshifts
+
+		# _i always counts up. Never use it. Its purpose is to track our own
+		# state.
+		self._i = 0
+
+		# val is the real value of where we should be reading nucleotides from.
+		self.val = 0
+
+	def incr(self):
+		if self._i in self.frameshifts:
+			self.val = self.val + 1 + self.frameshifts[self._i]
+		else:
+			self.val += 1
+
+		self._i += 1
+		return self.val
+
+	def add(self, n):
+		for _ in range(n):
+			self.incr()
+
+	def set(self, n):
+		assert n >= self.val
+		while self.val != n:
+			self.incr()
+
+	def unshift(self):
+		self.val = self._i
+
+
 def get_residue(codon):
 	"""Get the residue of a codon, which can either be a string like 'GGT' or
 	an np array"""
@@ -103,25 +139,31 @@ def get_residue(codon):
 
 
 def next_codon(genome, i):
-	"""Find the next codon (skipping gaps) in the starting from i. Return the
-	actual codon and the position of the end of it"""
+	"""Find the next codon (skipping gaps) in the genome starting from i.
+	Return the actual codon and the position of the end of it"""
 	t = ''
-	while i < len(genome):
-		c = chr(genome[i])
+	i = copy(i)
+
+	while i.val < len(genome):
+		c = chr(genome[i.val])
 
 		if c != '-':
 			t += c
 
 		if len(t) == 3:
-			return t, i
+			return t, i.val
 
-		i += 1
+		i.incr()
+
 	raise StopIteration
 
 
 def find_codons(genome):
 	"""Generate the offsets of each codon"""
-	i, n = 0, len(genome)
+	# This is the SARS-CoV-2 frameshift. Note that this code won't work
+	# properly unless you're using this genome! But you probably are.
+	frameshifts = {13468: -1}
+	i, n = Iterator(frameshifts), len(genome)
 
 	count = 0
 	start = 0
@@ -133,20 +175,22 @@ def find_codons(genome):
 			# Skip one nt at a time until we find the start codon
 			codon, j = next_codon(genome, i)
 			r = get_residue(codon)
-			i += 1
+			i.incr()
 
 			if r == 'M':
-				yield codon, (i-1, j+1)
+				yield codon, (i.val-1, j+1)
 				reading = True
-				i += 2	# skip to the end of the M codon itself
+				i.add(2)	# skip to the end of the M codon itself
 				continue
 		else:	# We are reading
 			codon, j = next_codon(genome, i)
-			yield codon, (i, j+1)
-			i = j + 1
+			yield codon, (i.val, j+1)
+			i.set(j+1)
 
-			if codon == '*':
+			if get_residue(codon) == '*':
 				reading = False
+				i.unshift()
+
 
 class Translator:
 	def __init__(self, genome):
