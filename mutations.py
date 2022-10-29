@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import numpy as np
+import math
 from scipy.stats import fisher_exact
 from argparse import ArgumentParser
 import translate as tr
@@ -85,27 +86,20 @@ class MutationMap:
 						for k in range(i, i+n):
 							if k in self.silent:
 								a += 1
-							else:
-								b += 1
+							# b just counts the number of nts in the matched
+							# pattern
+							b += 1
 
+		# Silent mutations everywhere else
 		c = len(self.silent) - a
-		d = len(self.non_silent) - b
 
-		if a == 0.0 or c == 0.0:
-			OR = -1
-		else:
-			OR = (a / b) / (c / d)
+		# Other nucleotides everywhere else
+		d = len(self.a) - b
 
 		contingency_table = np.array([[a, b], [c, d]], dtype=float)
+		OR, p = fisher_exact(contingency_table)
 
-		# This returns the OR, which is the same as ours, except we get NaN for
-		# the undefined ones (which we decided to use -1 for). The Fisher Test
-		# is not applicable here anyway though, because we would not expect an
-		# OR of 1.0 under the null hypothesis. But it's just for comparison
-		# with their results.
-		_, p = fisher_exact(contingency_table)
-
-		return a, b, c, d, OR, p
+		return OR, p
 
 	def output_clu(self, name_a, name_b, fp):
 		"""Output in a sort of clu format but plus the residues"""
@@ -174,7 +168,7 @@ def main():
 	if args.residues_only:
 		return
 
-	mm.summary()
+# 	mm.summary()
 
 	# Consider them all together
 	print("All together")
@@ -188,9 +182,18 @@ def main():
 		return
 
 	print("Controls")
+
+	total, count = 0.0, 0.0
+
 	for pat in patterns():
 		if pat in interesting: continue
-		print(pat, *mm.silent_mutations_in_sequences((pat,)))
+		OR, p = mm.silent_mutations_in_sequences((pat,))
+		if not math.isnan(OR):
+			total += OR
+			count += 1
+		print(pat, OR, p, total/count if count else "")
+
+	print("Average OR where defined:", total / count)
 
 
 if __name__ == "__main__":
