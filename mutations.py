@@ -99,7 +99,7 @@ class MutationMap:
 		contingency_table = np.array([[a, b], [c, d]], dtype=float)
 		OR, p = fisher_exact(contingency_table)
 
-		return OR, p
+		return a, c, OR, p
 
 	def output_clu(self, name_a, name_b, fp):
 		"""Output in a sort of clu format but plus the residues"""
@@ -170,9 +170,11 @@ def main():
 
 # 	mm.summary()
 
+	print("<num_silent in sites> <num_silent outside> <OR> <p>")
+
 	# Consider them all together
 	print("All together")
-	print(mm.silent_mutations_in_sequences(interesting))
+	print(*mm.silent_mutations_in_sequences(interesting))
 
 	# And one at a time
 	for pat in interesting:
@@ -187,11 +189,11 @@ def main():
 
 	for pat in patterns():
 		if pat in interesting: continue
-		OR, p = mm.silent_mutations_in_sequences((pat,))
+		a, c, OR, p = mm.silent_mutations_in_sequences((pat,))
 		if not math.isnan(OR):
 			total += OR
 			count += 1
-		print(pat, OR, p, total/count if count else "")
+		print(pat, a, c, OR, p)
 
 	print("Average OR where defined:", total / count)
 
