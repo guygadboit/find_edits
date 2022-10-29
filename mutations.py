@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import numpy as np
+from scipy.stats import fisher_exact
 from argparse import ArgumentParser
 import translate as tr
 from translate import find_codons, get_residue
@@ -95,7 +96,16 @@ class MutationMap:
 		else:
 			OR = (a / b) / (c / d)
 
-		return a, b, c, d, OR
+		contingency_table = np.array([[a, b], [c, d]], dtype=float)
+
+		# This returns the OR, which is the same as ours, except we get NaN for
+		# the undefined ones (which we decided to use -1 for). The Fisher Test
+		# is not applicable here anyway though, because we would not expect an
+		# OR of 1.0 under the null hypothesis. But it's just for comparison
+		# with their results.
+		_, p = fisher_exact(contingency_table)
+
+		return a, b, c, d, OR, p
 
 	def output_clu(self, name_a, name_b, fp):
 		"""Output in a sort of clu format but plus the residues"""
@@ -147,6 +157,7 @@ def main():
 	ap.add_argument('-o', "--output", type=str, default="residues.clu")
 	ap.add_argument('-n', "--residues-only", action="store_true",
 			help="Just make the residues file")
+	ap.add_argument('-e', "--exhaustive", action="store_true")
 	args = ap.parse_args()
 
 	gs = GenomeSet(args.fname[0])
@@ -165,9 +176,16 @@ def main():
 
 	mm.summary()
 
+	# Consider them all together
+	print("All together")
+	print(mm.silent_mutations_in_sequences(interesting))
+
+	# And one at a time
 	for pat in interesting:
 		print(pat, *mm.silent_mutations_in_sequences((pat,)))
-	return
+
+	if not args.exhaustive:
+		return
 
 	print("Controls")
 	for pat in patterns():
