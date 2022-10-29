@@ -167,6 +167,7 @@ def main():
 
 	for pat in interesting:
 		print(pat, *mm.silent_mutations_in_sequences((pat,)))
+	return
 
 	print("Controls")
 	for pat in patterns():

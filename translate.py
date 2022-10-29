@@ -1,5 +1,7 @@
-from pdb import set_trace as brk
 import numpy as np
+from argparse import ArgumentParser
+from load_genomes import GenomeSet
+from pdb import set_trace as brk
 
 
 CODON_TABLE = {
@@ -155,7 +157,8 @@ class Translator:
 
 	def get_residue(self, offset):
 		"""Intended to be used as a coroutine-- you can only call this with
-		monotonically increasing offsets"""
+		monotonically increasing offsets, i.e. from a for loop over all the
+		offsets basically"""
 		if self.pos[0] <= offset < self.pos[1]:
 			return self.current_residue
 
@@ -168,3 +171,38 @@ class Translator:
 				pass
 
 		return '|'	# We'll use this to mean untranslated
+
+
+def main():
+	ap = ArgumentParser()
+	ap.add_argument("fname", nargs=1)
+	args = ap.parse_args()
+
+	gs = GenomeSet(args.fname[0])
+
+	start_pos = None
+	orfs = []
+
+	for codon, pos in find_codons(gs.genomes):
+		residue = get_residue(codon)
+
+		if residue == 'M':
+			if not start_pos:
+				start_pos = pos[0]
+				print("Start at", start_pos)
+		elif residue == '*':
+			if start_pos:
+				orfs.append((start_pos, pos[1]))
+				print("\nEnd at", pos[1])
+				start_pos = None
+
+		if start_pos:
+			print(residue, end="")
+
+	print("\nORFs")
+	for orf in orfs:
+		print(*orf)
+
+
+if __name__ == "__main__":
+	main()

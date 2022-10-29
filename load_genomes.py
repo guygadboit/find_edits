@@ -1,5 +1,6 @@
 import numpy as np
 from utils import array_from_string
+from pdb import set_trace as brk
 
 
 def _lines(fname):
@@ -26,11 +27,8 @@ class GenomeSet:
 			if line.startswith('>'):
 				self.names.append(line[1:])
 				if row is not None:
-					if genomes is None:
-						genomes = row
-					else:
-						genomes = np.vstack((genomes, row))
-
+					genomes = (np.vstack((genomes, row)) if genomes is not None
+								else row)
 					row = None
 			else:
 				l = array_from_string(line)
@@ -41,7 +39,7 @@ class GenomeSet:
 					row = np.hstack((row, l))
 
 		if row is not None:
-			genomes = np.vstack((genomes, row))
+			genomes = np.vstack((genomes, row)) if genomes is not None else row
 
 		self.genomes = genomes
 
