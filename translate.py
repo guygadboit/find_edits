@@ -162,7 +162,7 @@ def find_codons(genome):
 	"""Generate the offsets of each codon"""
 	# This is the SARS-CoV-2 frameshift. Note that this code won't work
 	# properly unless you're using this genome! But you probably are.
-	frameshifts = {13468: -1}
+	frameshifts = {13468: -1, 26220: 22}
 	i, n = Iterator(frameshifts), len(genome)
 
 	count = 0
