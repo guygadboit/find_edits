@@ -86,15 +86,16 @@ class MutationMap:
 						for k in range(i, i+n):
 							if k in self.silent:
 								a += 1
-							# b just counts the number of nts in the matched
-							# pattern
 							b += 1
+
+		# b is the number of non-silently or non-mutated nts in the sites
+		b -= a
 
 		# Silent mutations everywhere else
 		c = len(self.silent) - a
 
 		# Other nucleotides everywhere else
-		d = len(self.a) - b
+		d = len(self.a) - a - c - b
 
 		contingency_table = np.array([[a, b], [c, d]], dtype=float)
 		OR, p = fisher_exact(contingency_table)
