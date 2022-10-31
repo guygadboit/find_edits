@@ -29,7 +29,7 @@ def fragments(genome, patterns):
 				yield start, i
 				start = i
 
-	yield i, len(genome)
+	yield start, len(genome)
 
 
 def longest_fragment(genome, patterns):
@@ -40,7 +40,7 @@ def longest_fragment(genome, patterns):
 		length = end - start
 		max_length = max(max_length, length)
 
-	return count, max_length
+	return count+1, max_length
 
 
 def random_patterns(n=2):
@@ -65,7 +65,7 @@ def montecarlo(genome, n=1000):
 		# complements of the other two.
 		patterns = random_patterns(2)
 		patterns.extend([reverse_complement(p) for p in patterns])
-		yield longest_fragment(genome, random_patterns())
+		yield longest_fragment(genome, patterns)
 
 
 def main():
