@@ -80,12 +80,13 @@ def main():
 	print("BsaI/BsmBI sites", *longest_fragment(genome, INTERESTING))
 
 	n = args.iterations
-	print("Running for {} iterations".format(n))
-	with open("montecarlo.txt", "w") as fp:
-		for i, lf in enumerate(montecarlo(gs.genomes, n)):
-			print(*lf, file=fp)
-			if i % 100 == 0:
-				print("{}/{} done".format(i, n))
+	if n:
+		print("Running for {} iterations".format(n))
+		with open("montecarlo.txt", "w") as fp:
+			for i, lf in enumerate(montecarlo(gs.genomes, n)):
+				print(*lf, file=fp)
+				if i % 100 == 0:
+					print("{}/{} done".format(i, n))
 
 
 if __name__ == "__main__":
