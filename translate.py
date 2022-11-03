@@ -220,6 +220,7 @@ class Translator:
 def main():
 	ap = ArgumentParser()
 	ap.add_argument("fname", nargs=1)
+	ap.add_argument("-p", "--positions", action="store_true")
 	args = ap.parse_args()
 
 	gs = GenomeSet(args.fname[0])
@@ -233,19 +234,24 @@ def main():
 		if residue == 'M':
 			if not start_pos:
 				start_pos = pos[0]
-				print("Start at", start_pos)
+				if args.positions:
+					print("Start at", start_pos)
 		elif residue == '*':
 			if start_pos:
 				orfs.append((start_pos, pos[1]))
-				print("\nEnd at", pos[1])
+				if args.positions:
+					print("\nEnd at", pos[1])
 				start_pos = None
 
 		if start_pos:
 			print(residue, end="")
 
-	print("\nORFs")
-	for orf in orfs:
-		print(*orf)
+	if args.positions:
+		print("\nORFs")
+		for orf in orfs:
+			print(*orf)
+	else:
+		print("\n")
 
 
 if __name__ == "__main__":
