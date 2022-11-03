@@ -46,6 +46,24 @@ def score(genomes, pattern):
 	else:
 		return 0.0
 
+def score_mutated(genomes, pattern):
+	"""Alternative score function for a different analysis: score 1 if there is
+	a 1nt difference for this pattern"""
+	count = 0
+
+	for sl in locate(genomes, pattern):
+		for row in sl[1:]:
+			count = 0
+			for a, b in zip(sl[0], row):
+				if a == b:
+					count += 1
+
+			# The same in 5 out of the 6 will count as a yes
+			if count == 5:
+				return 1
+
+	return 0
+
 
 def get_triplet(row, i):
 	"""Find the next triplet (skipping gaps) in the first row starting from i.
@@ -71,8 +89,16 @@ def main():
 
 	gs = GenomeSet(args.fname[0])
 
+	total, count = 0, 0
+
 	for p in patterns():
-		print(p, score(gs.genomes, p))
+		# print(p, score(gs.genomes, p))
+		score = score_mutated(gs.genomes, p)
+		print(p, score)
+		total += score
+		count += 1
+
+	print("Average score {}".format(float(total) / count))
 
 
 if __name__ == "__main__":
