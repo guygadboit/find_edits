@@ -105,8 +105,7 @@ class MutationMap:
 
 	def output_clu(self, name_a, name_b, fp):
 		"""Output in a sort of clu format but plus the residues"""
-		ta, tb = (tr.Translator(self.a, self.a_orfs),
-				tr.Translator(self.b, self.a_orfs))
+		translator = tr.Translator([self.a, self.b], self.a_orfs)
 
 		name_a = name_a.split()[0][:12]
 		name_b = name_b.split()[0][:12]
@@ -134,14 +133,14 @@ class MutationMap:
 			w('\n')
 
 			# And now the residues
-			for name, genome, translator in (
-					(name_a, self.a, ta), (name_b, self.b, tb)):
-				w(name.ljust(16))
+			residues_a, residues_b = "", ""
+			for j in range(i, end):
+				residues = translator.get_residues(j)
+				residues_a += residues[0]
+				residues_b += residues[1]
 
-				for j in range(i, end):
-					residue = translator.get_residue(j)
-					w(residue)
-				w('\n')
+			w("{}{}\n".format(name_a.ljust(16), residues_a))
+			w("{}{}\n".format(name_b.ljust(16), residues_b))
 			w('\n')
 
 

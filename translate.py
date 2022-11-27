@@ -205,28 +205,37 @@ def find_codons(genome, orfs):
 
 
 class Translator:
-	def __init__(self, genome, orfs):
-		self.genome = genome
-		self.translator = find_codons(genome, orfs)
-		self.current_residue = None
+	def __init__(self, genomes, orfs):
+		"""genomes is multiple aligned genomes. orfs is the orfs for the first
+		one"""
+		self.genomes = genomes
+		self.translator = find_codons(genomes[0], orfs)
+		self.current_residues = []
 		self.pos = (0, 0)
 
-	def get_residue(self, offset):
-		"""Intended to be used as a coroutine-- you can only call this with
-		monotonically increasing offsets, i.e. from a for loop over all the
-		offsets basically"""
+	def get_residues(self, offset):
+		"""Get the residues in each of our genomes at offset. Intended to be
+		used as a coroutine-- you can only call this with monotonically
+		increasing offsets, i.e. from a for loop over all the offsets
+		basically."""
 		if self.pos[0] <= offset < self.pos[1]:
-			return self.current_residue
+			return self.current_residues
 
 		if offset >= self.pos[1]:
 			try:
 				codon, self.pos = next(self.translator)
-				self.current_residue = get_residue(codon)
-				return self.get_residue(offset)
+				self.current_residues = [get_residue(codon)]
+
+				i, j = self.pos
+				for g in self.genomes[1:]:
+					self.current_residues.append(get_residue(g[i:j]))
+
+				return self.get_residues(offset)
+
 			except StopIteration:
 				pass
 
-		return '|'	# We'll use this to mean untranslated
+		return '|' * len(self.genomes)	# We'll use this to mean untranslated
 
 
 def main():
