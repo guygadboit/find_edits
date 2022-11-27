@@ -1,6 +1,8 @@
 import numpy as np
 from argparse import ArgumentParser
 from load_genomes import GenomeSet
+from collections import namedtuple
+from textwrap import wrap
 from copy import *
 from pdb import set_trace as brk
 
@@ -95,39 +97,72 @@ CODON_TABLE = {
 	}
 
 
-class Iterator:
-	def __init__(self, frameshifts):
-		"""An iterator but that can jump around a little bit. frameshifts is a
-		dictionary of offsets to relative jumps"""
-		self.frameshifts = frameshifts
+ORF = namedtuple("ORF", "start end")
 
-		# _i always counts up. Never use it. Its purpose is to track our own
-		# state.
+
+def parse_orfs(fname):
+	ret = []
+	with open(fname) as fp:
+		for line in fp:
+			start, end = [int(x) for x in line.split()]
+			# ORFs seem to be conventionally listed as 1-based
+			ret.append(ORF(start-1, end))
+	return ret
+
+
+class ORFIterator:
+	def __init__(self, orfs):
+		self.orfs = orfs
 		self._i = 0
+		self.orf_i = 0
 
-		# val is the real value of where we should be reading nucleotides from.
-		self.val = 0
+		# The genome may contain blanks ('-') as part of its alignment with the
+		# others. But our list of ORF indices doesn't take that into account.
+		# So we return the real offset plus "_skip", which is the numer of '-'s
+		# seen by the thing translating the genome
+		self._skip = 0
+
+		self._next_orf()
+
+		# Move to the start of the first ORF
+		self.incr()
+
+	def _next_orf(self):
+		if self.orf_i < len(self.orfs):
+			self.current_orf = self.orfs[self.orf_i]
+			self._i = 0
+		else:
+			self.current_orf = None
+		self.orf_i += 1
 
 	def incr(self):
-		if self._i in self.frameshifts:
-			self.val = self.val + 1 + self.frameshifts[self._i]
-		else:
-			self.val += 1
+		if self.current_orf is None:
+			raise StopIteration
+
+		if self._i < self.current_orf.start:
+			self._i = self.current_orf.start
+			return self._i + self._skip
 
 		self._i += 1
-		return self.val
+		if self._i == self.current_orf.end:
+			self._next_orf()
+			return self.incr()
 
 	def add(self, n):
 		for _ in range(n):
 			self.incr()
 
 	def set(self, n):
-		assert n >= self.val
-		while self.val != n:
+		assert n >= self._i
+		while self._i != n:
 			self.incr()
 
-	def unshift(self):
-		self.val = self._i
+	def skip(self):
+		self._skip += 1
+
+	def val(self):
+		"""Where to the read actual genome from"""
+		return self._i + self._skip
 
 
 def get_residue(codon):
@@ -142,60 +177,37 @@ def next_codon(genome, i):
 	"""Find the next codon (skipping gaps) in the genome starting from i.
 	Return the actual codon and the position of the end of it"""
 	t = ''
-	i = copy(i)
 
-	while i.val < len(genome):
-		c = chr(genome[i.val])
+	while True:
+		c = chr(genome[i.val()])
 
-		if c != '-':
+		if c == '-':
+			i.skip()
+		else:
 			t += c
 
 		if len(t) == 3:
-			return t, i.val
+			ret = t, i.val()
+			i.incr()
+			return ret
 
 		i.incr()
 
-	raise StopIteration
 
-
-def find_codons(genome):
+def find_codons(genome, orfs):
 	"""Generate the offsets of each codon"""
-	# This is the SARS-CoV-2 frameshift. Note that this code won't work
-	# properly unless you're using this genome! But you probably are.
-	frameshifts = {13468: -1, 26220: 22}
-	i, n = Iterator(frameshifts), len(genome)
-
-	count = 0
-	start = 0
-
-	reading = False
+	i, n = ORFIterator(orfs), len(genome)
 
 	while True:
-		if not reading:
-			# Skip one nt at a time until we find the start codon
-			codon, j = next_codon(genome, i)
-			r = get_residue(codon)
-			i.incr()
-
-			if r == 'M':
-				yield codon, (i.val-1, j+1)
-				reading = True
-				i.add(2)	# skip to the end of the M codon itself
-				continue
-		else:	# We are reading
-			codon, j = next_codon(genome, i)
-			yield codon, (i.val, j+1)
-			i.set(j+1)
-
-			if get_residue(codon) == '*':
-				reading = False
-				i.unshift()
+		start = i.val()
+		codon, end = next_codon(genome, i)
+		yield codon, (start, end+1)
 
 
 class Translator:
-	def __init__(self, genome):
+	def __init__(self, genome, orfs):
 		self.genome = genome
-		self.translator = find_codons(genome)
+		self.translator = find_codons(genome, orfs)
 		self.current_residue = None
 		self.pos = (0, 0)
 
@@ -220,38 +232,29 @@ class Translator:
 def main():
 	ap = ArgumentParser()
 	ap.add_argument("fname", nargs=1)
-	ap.add_argument("-p", "--positions", action="store_true")
+	ap.add_argument("-r", "--orfs", type=str, default="WH1-orfs")
 	args = ap.parse_args()
 
 	gs = GenomeSet(args.fname[0])
 
 	start_pos = None
 	orfs = []
+	line = ""
+	debugging = False
 
-	for codon, pos in find_codons(gs.genomes):
+	orfs = parse_orfs(args.orfs)
+
+	for codon, pos in find_codons(gs.genomes, orfs):
 		residue = get_residue(codon)
+		if residue == '*':
+			continue
+		line += residue
 
-		if residue == 'M':
-			if not start_pos:
-				start_pos = pos[0]
-				if args.positions:
-					print("Start at", start_pos)
-		elif residue == '*':
-			if start_pos:
-				orfs.append((start_pos, pos[1]))
-				if args.positions:
-					print("\nEnd at", pos[1])
-				start_pos = None
+		if len(line) == 70:
+			print(line)
+			line = ""
 
-		if start_pos:
-			print(residue, end="")
-
-	if args.positions:
-		print("\nORFs")
-		for orf in orfs:
-			print(*orf)
-	else:
-		print("\n")
+	print(line)
 
 
 if __name__ == "__main__":

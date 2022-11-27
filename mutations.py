@@ -4,7 +4,7 @@ import math
 from scipy.stats import fisher_exact
 from argparse import ArgumentParser
 import translate as tr
-from translate import find_codons, get_residue
+from translate import find_codons, get_residue, parse_orfs
 from textwrap import wrap
 from load_genomes import GenomeSet
 from utils import array_from_string, patterns
@@ -12,10 +12,11 @@ from pdb import set_trace as brk
 
 
 class MutationMap:
-	def __init__(self, a, b):
+	def __init__(self, a, b, a_orfs):
 		"""a and b are both aligned genomes"""
 		self.a = a
 		self.b = b
+		self.a_orfs = a_orfs
 
 		# Sets of nt offsets for where the silent and non-silent mutations are
 		self.silent = set()
@@ -28,7 +29,7 @@ class MutationMap:
 		self.find_mutations()
 
 	def find_mutations(self):
-		for a_codon, (i, j) in tr.find_codons(self.a):
+		for a_codon, (i, j) in tr.find_codons(self.a, self.a_orfs):
 			b_codon = self.b[i:j]
 
 			a_residue = tr.get_residue(a_codon)
@@ -104,7 +105,8 @@ class MutationMap:
 
 	def output_clu(self, name_a, name_b, fp):
 		"""Output in a sort of clu format but plus the residues"""
-		ta, tb = tr.Translator(self.a), tr.Translator(self.b)
+		ta, tb = (tr.Translator(self.a, self.a_orfs),
+				tr.Translator(self.b, self.a_orfs))
 
 		name_a = name_a.split()[0][:12]
 		name_b = name_b.split()[0][:12]
@@ -116,9 +118,7 @@ class MutationMap:
 
 		for i in range(0, len(self.a), 60):
 			end = min(len(self.a), i+60)
-			for name, genome in (
-					(name_a, self.a),
-					(name_b, self.b)):
+			for name, genome in ((name_a, self.a), (name_b, self.b)):
 
 				w(name.ljust(16))
 				for j in range(i, end):
@@ -135,8 +135,7 @@ class MutationMap:
 
 			# And now the residues
 			for name, genome, translator in (
-					(name_a, self.a, ta),
-					(name_b, self.b, tb)):
+					(name_a, self.a, ta), (name_b, self.b, tb)):
 				w(name.ljust(16))
 
 				for j in range(i, end):
@@ -149,6 +148,10 @@ class MutationMap:
 def main():
 	ap = ArgumentParser()
 	ap.add_argument("fname", nargs=1)
+
+	# These should be the ORFs for the first genome of the pair
+	ap.add_argument("-r", "--orfs", type=str, default="WH1-orfs")
+
 	ap.add_argument('-o', "--output", type=str, default="residues.clu")
 	ap.add_argument('-n', "--residues-only", action="store_true",
 			help="Just make the residues file")
@@ -160,7 +163,7 @@ def main():
 		print("You're supposed to only have two genomes for this one!")
 		return
 
-	mm = MutationMap(gs.genomes[0], gs.genomes[1])
+	mm = MutationMap(gs.genomes[0], gs.genomes[1], parse_orfs(args.orfs))
 
 	with open(args.output, "w") as fp:
 		mm.output_clu(gs.get_name(0), gs.get_name(1), fp)
