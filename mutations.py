@@ -23,9 +23,9 @@ class MutationMap:
 		self.silent = set()
 		self.non_silent = set()
 
-		# Map the offset of each silently mutated base to the number of other
-		# ways that same mutation could be achieved (by modifying the base in
-		# either genome)
+		# Map the offset of each silently mutated base to the number of ways
+		# that same mutation could be achieved (by modifying the base in either
+		# genome)
 		self.silent_alternatives = {}
 
 		# The total number of alternatives for each base across the whole
@@ -58,9 +58,10 @@ class MutationMap:
 					save_in.add(x)
 
 					if silent:
-						ax = alternatives(a_residue, x-i) - 1
-						bx = alternatives(b_residue, x-i) - 1
-						self.silent_alternatives[x] = ax * bx
+						ax = alternatives(a_residue, x-i)
+						# The total number of pairs of different nts in the two
+						# genomes at this point.
+						self.silent_alternatives[x] = ax * ax - ax
 
 					codon_changed = True
 
@@ -91,7 +92,6 @@ class MutationMap:
 		print("For each silent mutation the number of alternatives")
 		print(self.silent_alternatives)
 
-
 	@staticmethod
 	def _match(genomes, patterns):
 		for pat in patterns:
@@ -101,7 +101,6 @@ class MutationMap:
 				for j in range(2):
 					if np.array_equal(genomes[j][i:i+n], apat):
 						yield i, i+n
-
 
 	def silent_mutations_in_sequences(self, patterns):
 		"""patterns is a list of things like "GAGACC". Return the number of
@@ -135,6 +134,10 @@ class MutationMap:
 		return a, c, OR, p
 
 	def sum_alternatives(self, patterns):
+		"""This is a more correct analysis I think. We look at how many changed
+		nts out of how many alternatives there were for that nt in order to
+		remain silent. Then we look at the odds ratio of that inside and
+		outside the sites"""
 		genomes = np.vstack((self.a, self.b))
 
 		a, b, c, d = 0.0, 0.0, 0.0, 0.0
