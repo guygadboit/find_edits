@@ -4,10 +4,11 @@ import math
 from scipy.stats import fisher_exact
 from argparse import ArgumentParser
 import translate as tr
-from translate import find_codons, get_residue, parse_orfs
+from translate import find_codons, get_residue, parse_orfs, alternatives
 from textwrap import wrap
 from load_genomes import GenomeSet
 from utils import array_from_string, patterns
+from collections import namedtuple
 from pdb import set_trace as brk
 
 
@@ -22,6 +23,15 @@ class MutationMap:
 		self.silent = set()
 		self.non_silent = set()
 
+		# Map the offset of each silently mutated base to the number of other
+		# ways that same mutation could be achieved (by modifying the base in
+		# either genome)
+		self.silent_alternatives = {}
+
+		# The total number of alternatives for each base across the whole
+		# genome.
+		self.total_alternatives = 0
+
 		# Just counts for these
 		self.num_silent_codon_changes = 0
 		self.num_non_silent_codon_changes = 0
@@ -35,7 +45,9 @@ class MutationMap:
 			a_residue = tr.get_residue(a_codon)
 			b_residue = tr.get_residue(b_codon)
 
-			if a_residue == b_residue:
+			silent = a_residue == b_residue
+
+			if silent:
 				save_in = self.silent
 			else:
 				save_in = self.non_silent
@@ -44,6 +56,12 @@ class MutationMap:
 			for x in range(i, j):
 				if self.a[x] != self.b[x]:
 					save_in.add(x)
+
+					if silent:
+						ax = alternatives(a_residue, x-i) - 1
+						bx = alternatives(b_residue, x-i) - 1
+						self.silent_alternatives[x] = ax * bx
+
 					codon_changed = True
 
 			if codon_changed:
@@ -51,6 +69,9 @@ class MutationMap:
 					self.num_silent_codon_changes += 1
 				else:
 					self.num_non_silent_codon_changes += 1
+
+		for v in self.silent_alternatives.values():
+			self.total_alternatives += v
 
 	def _summarize_set(self, s):
 		ret = ", ".join([str(x) for x in s])
@@ -67,6 +88,21 @@ class MutationMap:
 			self.num_silent_codon_changes,
 			self.num_non_silent_codon_changes))
 
+		print("For each silent mutation the number of alternatives")
+		print(self.silent_alternatives)
+
+
+	@staticmethod
+	def _match(genomes, patterns):
+		for pat in patterns:
+			apat = array_from_string(pat)
+			n = len(apat)
+			for i in range(genomes.shape[1] - n - 1):
+				for j in range(2):
+					if np.array_equal(genomes[j][i:i+n], apat):
+						yield i, i+n
+
+
 	def silent_mutations_in_sequences(self, patterns):
 		"""patterns is a list of things like "GAGACC". Return the number of
 		silent mutations in those patterns, the number outside them and the
@@ -78,16 +114,11 @@ class MutationMap:
 		# Use for computing the odds ratio
 		a, b, c, d = 0.0, 0.0, 0.0, 0.0
 
-		for pat in patterns:
-			apat = array_from_string(pat)
-			n = len(apat)
-			for i in range(genomes.shape[1] - n - 1):
-				for j in range(2):
-					if np.array_equal(genomes[j][i:i+n], apat):
-						for k in range(i, i+n):
-							if k in self.silent:
-								a += 1
-							b += 1
+		for start, end in self._match(genomes, patterns):
+			for k in range(start, end):
+				if k in self.silent:
+					a += 1
+				b += 1
 
 		# b is the number of non-silently or non-mutated nts in the sites
 		b -= a
@@ -102,6 +133,26 @@ class MutationMap:
 		OR, p = fisher_exact(contingency_table)
 
 		return a, c, OR, p
+
+	def sum_alternatives(self, patterns):
+		genomes = np.vstack((self.a, self.b))
+
+		a, b, c, d = 0.0, 0.0, 0.0, 0.0
+
+		inside = 0
+		for start, end in self._match(genomes, patterns):
+			for k in range(start, end):
+				if k in self.silent_alternatives:
+					a += 1
+					b += self.silent_alternatives[k]
+
+		c = len(self.silent) - a
+		d = self.total_alternatives - b
+
+		contingency_table = np.array([[a, b], [c, d]], dtype=float)
+		OR, p = fisher_exact(contingency_table)
+
+		return OR, p
 
 	def output_clu(self, name_a, name_b, fp):
 		"""Output in a sort of clu format but plus the residues"""
@@ -177,11 +228,13 @@ def main():
 
 	# Consider them all together
 	print("All together")
-	print(*mm.silent_mutations_in_sequences(interesting))
+# 	print(*mm.silent_mutations_in_sequences(interesting))
+	print("Alternatives", *mm.sum_alternatives(interesting))
 
 	# And one at a time
 	for pat in interesting:
-		print(pat, *mm.silent_mutations_in_sequences((pat,)))
+# 		print(pat, *mm.silent_mutations_in_sequences((pat,)))
+		print("Alternatives", pat, *mm.sum_alternatives((pat,)))
 
 	if not args.exhaustive:
 		return
@@ -192,11 +245,13 @@ def main():
 
 	for pat in patterns():
 		if pat in interesting: continue
-		a, c, OR, p = mm.silent_mutations_in_sequences((pat,))
-		if not math.isnan(OR):
-			total += OR
-			count += 1
-		print(pat, a, c, OR, p)
+		print(pat, *mm.sum_alternatives((pat,)))
+
+# 		a, c, OR, p = mm.silent_mutations_in_sequences((pat,))
+# 		if not math.isnan(OR):
+# 			total += OR
+# 			count += 1
+# 		print(pat, a, c, OR, p)
 
 	print("Average OR where defined:", total / count)
 

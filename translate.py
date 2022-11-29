@@ -1,7 +1,7 @@
 import numpy as np
 from argparse import ArgumentParser
 from load_genomes import GenomeSet
-from collections import namedtuple
+from collections import namedtuple, defaultdict
 from textwrap import wrap
 from copy import *
 from pdb import set_trace as brk
@@ -95,6 +95,14 @@ CODON_TABLE = {
 		"GGA": 'G',
 		"GGG": 'G',
 	}
+
+
+def _make_reverse_table():
+	ret = defaultdict(list)
+	for k, v in CODON_TABLE.items():
+		ret[v].append(k)
+	return ret
+REVERSE_CODON_TABLE = _make_reverse_table()
 
 
 ORF = namedtuple("ORF", "start end")
@@ -236,6 +244,15 @@ class Translator:
 				pass
 
 		return '|' * len(self.genomes)	# We'll use this to mean untranslated
+
+
+def alternatives(residue, i):
+	"""i is 0, 1 or 2 for the position of a base within a codon. Return the
+	number of values that base can have for this residue"""
+	s = set()
+	for codon in REVERSE_CODON_TABLE[residue]:
+		s.add(codon[i])
+	return len(s)
 
 
 def main():
