@@ -131,7 +131,7 @@ class MutationMap:
 		contingency_table = np.array([[a, b], [c, d]], dtype=float)
 		OR, p = fisher_exact(contingency_table)
 
-		return a, c, OR, p
+		return OR, p
 
 	def sum_alternatives(self, patterns):
 		"""This is a more correct analysis I think. We look at how many changed
@@ -149,6 +149,7 @@ class MutationMap:
 					a += 1
 					b += self.silent_alternatives[k]
 
+		b -= a
 		c = len(self.silent) - a
 		d = self.total_alternatives - b
 
@@ -209,6 +210,7 @@ def main():
 	ap.add_argument('-n', "--residues-only", action="store_true",
 			help="Just make the residues file")
 	ap.add_argument('-e', "--exhaustive", action="store_true")
+	ap.add_argument('-a', "--alternative", action="store_true", default=False)
 	args = ap.parse_args()
 
 	gs = GenomeSet(args.fname[0])
@@ -227,17 +229,18 @@ def main():
 
 # 	mm.summary()
 
-	print("<num_silent in sites> <num_silent outside> <OR> <p>")
+	if args.alternative:
+		method = mm.sum_alternatives
+	else:
+		method = mm.silent_mutations_in_sequences
 
 	# Consider them all together
 	print("All together")
-# 	print(*mm.silent_mutations_in_sequences(interesting))
-	print("Alternatives", *mm.sum_alternatives(interesting))
+	print(*method(interesting))
 
 	# And one at a time
 	for pat in interesting:
-# 		print(pat, *mm.silent_mutations_in_sequences((pat,)))
-		print("Alternatives", pat, *mm.sum_alternatives((pat,)))
+		print(pat, *method((pat,)))
 
 	if not args.exhaustive:
 		return
@@ -248,15 +251,7 @@ def main():
 
 	for pat in patterns():
 		if pat in interesting: continue
-		print(pat, *mm.sum_alternatives((pat,)))
-
-# 		a, c, OR, p = mm.silent_mutations_in_sequences((pat,))
-# 		if not math.isnan(OR):
-# 			total += OR
-# 			count += 1
-# 		print(pat, a, c, OR, p)
-
-	print("Average OR where defined:", total / count)
+		print(pat, *method((pat,)))
 
 
 if __name__ == "__main__":
