@@ -4,6 +4,7 @@ from argparse import ArgumentParser
 from load_genomes import GenomeSet
 from utils import patterns, array_from_string
 from random import *
+from translate import Translator
 from pdb import set_trace as brk
 
 
