@@ -72,11 +72,31 @@ def summary(genome, orfs, pattern):
 	return actual, potential
 
 
+def longest_fragment(genome, orfs, pattern):
+	"""Split the genome at places where patterns either do appear or could
+	appear with silent mutations"""
+	prev_pos = None
+	longest = 0
+	n = 0
+
+	for pos, _ in search(genome, orfs, pattern):
+		if prev_pos is not None:
+			longest = max(longest, pos - prev_pos)
+			n += 1
+		prev_pos = pos
+
+	if n:
+		longest = max(longest, len(genome) - pos)
+
+	return n, longest
+
+
 def main():
 	ap = ArgumentParser()
 	ap.add_argument("fname", nargs=1)
 	ap.add_argument("-r", "--orfs", type=str, default="WH1-orfs")
 	ap.add_argument('-e', "--exhaustive", action="store_true")
+	ap.add_argument('-l', "--lengths", action="store_true")
 	args = ap.parse_args()
 
 	gs = GenomeSet(args.fname[0])
@@ -86,8 +106,13 @@ def main():
 
 	interesting = ("CGTCTC", "GAGACC", "GGTCTC", "GAGACG")
 
+	if args.lengths:
+		fn = longest_fragment
+	else:
+		fn = summary
+
 	for pat in interesting:
-		print(pat, *summary(genome, orfs, pat))
+		print(pat, *fn(genome, orfs, pat))
 
 	if not args.exhaustive:
 		return
@@ -95,7 +120,7 @@ def main():
 	print("Controls")
 	for pat in patterns():
 		if pat in interesting: continue
-		print(pat, *summary(genome, orfs, pat))
+		print(pat, *fn(genome, orfs, pat))
 
 
 if __name__ == "__main__":
