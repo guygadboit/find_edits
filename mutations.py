@@ -92,6 +92,17 @@ class MutationMap:
 		print("For each silent mutation the number of alternatives")
 		print(self.silent_alternatives)
 
+	def graph(self):
+		for i in range(len(self.a)):
+			if i in self.silent:
+				v = 1
+			elif i in self.non_silent:
+				v = 2
+			else:
+				v = 0
+
+			print(i, v)
+
 	@staticmethod
 	def _match(genomes, patterns):
 		for pat in patterns:
@@ -230,6 +241,7 @@ def main():
 
 	if args.summary:
 		mm.summary()
+		mm.graph()
 
 	if args.alternative:
 		method = mm.sum_alternatives
