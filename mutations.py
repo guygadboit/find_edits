@@ -211,6 +211,7 @@ def main():
 			help="Just make the residues file")
 	ap.add_argument('-e', "--exhaustive", action="store_true")
 	ap.add_argument('-a', "--alternative", action="store_true", default=False)
+	ap.add_argument('-s', "--summary", action="store_true", default=False)
 	args = ap.parse_args()
 
 	gs = GenomeSet(args.fname[0])
@@ -227,7 +228,8 @@ def main():
 	if args.residues_only:
 		return
 
-# 	mm.summary()
+	if args.summary:
+		mm.summary()
 
 	if args.alternative:
 		method = mm.sum_alternatives
