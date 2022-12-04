@@ -191,6 +191,7 @@ def next_codon(genome, i):
 
 		if c == '-':
 			i.skip()
+			continue
 		else:
 			t += c
 
