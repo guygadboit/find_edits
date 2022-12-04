@@ -32,6 +32,9 @@ class MutationMap:
 		# genome.
 		self.total_alternatives = 0
 
+		# Longest run of consecutive silent mutations
+		self.max_cs = 0
+
 		# Just counts for these
 		self.num_silent_codon_changes = 0
 		self.num_non_silent_codon_changes = 0
@@ -79,12 +82,6 @@ class MutationMap:
 		return "\n".join(wrap(ret))
 
 	def summary(self):
-		print("{} silent mutations".format(len(self.silent)))
-		print(self._summarize_set(self.silent))
-
-		print("{} non-silent mutations".format(len(self.non_silent)))
-		print(self._summarize_set(self.non_silent))
-
 		print("{} silent codon changes, {} non-silent ones".format(
 			self.num_silent_codon_changes,
 			self.num_non_silent_codon_changes))
@@ -92,16 +89,37 @@ class MutationMap:
 		print("For each silent mutation the number of alternatives")
 		print(self.silent_alternatives)
 
+		print("{} silent mutations".format(len(self.silent)))
+		print(self._summarize_set(self.silent))
+
+		print("{} non-silent mutations".format(len(self.non_silent)))
+		print(self._summarize_set(self.non_silent))
+
+		s = len(self.silent)
+		ns = len(self.non_silent)
+
+		print("silent/non-silent: {}/{}={:.2f} total {}".format(
+			s, ns, float(s) / ns, s + ns))
+
+		print("Longest consecutive run of silent", self.max_cs)
+
 	def graph(self):
+		cs, max_cs = 0, 0
+
 		for i in range(len(self.a)):
 			if i in self.silent:
 				v = 1
+				cs += 1
 			elif i in self.non_silent:
 				v = 2
+				max_cs = max(max_cs, cs)
+				cs = 0
 			else:
 				v = 0
 
 			print(i, v)
+
+		self.max_cs = max_cs
 
 	@staticmethod
 	def _match(genomes, patterns):
@@ -240,8 +258,8 @@ def main():
 		return
 
 	if args.summary:
-		mm.summary()
 		mm.graph()
+		mm.summary()
 
 	if args.alternative:
 		method = mm.sum_alternatives
