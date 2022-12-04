@@ -38,6 +38,7 @@ class MutationMap:
 		# Just counts for these
 		self.num_silent_codon_changes = 0
 		self.num_non_silent_codon_changes = 0
+		self.num_isoleucine = 0
 
 		self.find_mutations()
 
@@ -65,6 +66,8 @@ class MutationMap:
 						# The total number of pairs of different nts in the two
 						# genomes at this point.
 						self.silent_alternatives[x] = ax * ax - ax
+					elif {a_residue, b_residue} == {"I", "L"}:
+						self.num_isoleucine += 1
 
 					codon_changed = True
 
@@ -78,7 +81,7 @@ class MutationMap:
 			self.total_alternatives += v
 
 	def _summarize_set(self, s):
-		ret = ", ".join([str(x) for x in s])
+		ret = ", ".join([str(x) for x in sorted(s)])
 		return "\n".join(wrap(ret))
 
 	def summary(self):
@@ -100,6 +103,8 @@ class MutationMap:
 
 		print("silent/non-silent: {}/{}={:.2f} total {}".format(
 			s, ns, float(s) / ns, s + ns))
+
+		print("Leucine/Isoleucine changes:", self.num_isoleucine)
 
 		print("Longest consecutive run of silent", self.max_cs)
 
