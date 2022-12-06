@@ -111,18 +111,21 @@ class MutationMap:
 	def graph(self):
 		cs, max_cs = 0, 0
 
-		for i in range(len(self.a)):
-			if i in self.silent:
-				v = 1
-				cs += 1
-			elif i in self.non_silent:
-				v = 2
-				max_cs = max(max_cs, cs)
-				cs = 0
-			else:
-				v = 0
+		with open("mutations.txt", "wt") as fp:
+			for i in range(len(self.a)):
+				if i in self.silent:
+					v = 1
+					cs += 1
+				elif i in self.non_silent:
+					v = 2
+					max_cs = max(max_cs, cs)
+					cs = 0
+				else:
+					v = 0
 
-			print(i, v)
+				print(i, v, file=fp)
+
+		print("Wrote mutations.txt")
 
 		self.max_cs = max_cs
 
