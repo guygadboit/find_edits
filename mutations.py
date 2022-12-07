@@ -110,23 +110,27 @@ class MutationMap:
 
 	def graph(self):
 		cs, max_cs = 0, 0
+		total_s, total_ns = 0, 0
 
-		with open("mutations.txt", "wt") as fp:
-			for i in range(len(self.a)):
-				if i in self.silent:
-					v = 1
-					cs += 1
-				elif i in self.non_silent:
-					v = 2
-					max_cs = max(max_cs, cs)
-					cs = 0
-				else:
-					v = 0
+		with open("muts.txt", "wt") as fp:
+			with open("cumulative-muts.txt", "wt") as fp2:
+				for i in range(len(self.a)):
+					if i in self.silent:
+						v = 1
+						cs += 1
+						total_s += 1
+					elif i in self.non_silent:
+						v = 2
+						max_cs = max(max_cs, cs)
+						cs = 0
+						total_ns += 1
+					else:
+						v = 0
 
-				print(i, v, file=fp)
+					print(v, file=fp)
+					print(total_s, total_ns, file=fp2)
 
-		print("Wrote mutations.txt")
-
+		print("Wrote muts.txt and cumulative-muts.txt")
 		self.max_cs = max_cs
 
 	@staticmethod
@@ -241,7 +245,7 @@ def main():
 	ap.add_argument("fname", nargs=1)
 
 	# These should be the ORFs for the first genome of the pair
-	ap.add_argument("-r", "--orfs", type=str, default="WH1-orfs")
+	ap.add_argument("-r", "--orfs", type=str, default="WH1.orfs")
 
 	ap.add_argument('-o', "--output", type=str, default="residues.clu")
 	ap.add_argument('-n', "--residues-only", action="store_true",

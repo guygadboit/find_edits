@@ -259,7 +259,7 @@ def alternatives(residue, i):
 def main():
 	ap = ArgumentParser()
 	ap.add_argument("fname", nargs=1)
-	ap.add_argument("-r", "--orfs", type=str, default="WH1-orfs")
+	ap.add_argument("-r", "--orfs", type=str, default="WH1.orfs")
 	args = ap.parse_args()
 
 	gs = GenomeSet(args.fname[0])
