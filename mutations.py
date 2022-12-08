@@ -22,6 +22,8 @@ class MutationMap:
 		# Sets of nt offsets for where the silent and non-silent mutations are
 		self.silent = set()
 		self.non_silent = set()
+		self.insertions = set()
+		self.deletions = set()
 
 		# Map the offset of each silently mutated base to the number of ways
 		# that same mutation could be achieved (by modifying the base in either
@@ -59,6 +61,14 @@ class MutationMap:
 			codon_changed = False
 			for x in range(i, j):
 				if self.a[x] != self.b[x]:
+
+					if self.a[x] == ord('-'):
+						self.deletions.add(x)
+						continue
+					elif self.b[x] == ord('-'):
+						self.insertions.add(x)
+						continue
+
 					save_in.add(x)
 
 					if silent:
@@ -68,6 +78,11 @@ class MutationMap:
 						self.silent_alternatives[x] = ax * ax - ax
 					elif {a_residue, b_residue} == {"I", "L"}:
 						self.num_isoleucine += 1
+
+						if self.a[x] == ord('-'):
+							self.insertions += 1
+						elif self.b[x] == ord('-'):
+							self.deletions += 1
 
 					codon_changed = True
 
@@ -98,6 +113,12 @@ class MutationMap:
 		print("{} non-silent mutations".format(len(self.non_silent)))
 		print(self._summarize_set(self.non_silent))
 
+		print("{} insertions".format(len(self.insertions)))
+		print(self._summarize_set(self.insertions))
+
+		print("{} deletions".format(len(self.deletions)))
+		print(self._summarize_set(self.deletions))
+
 		s = len(self.silent)
 		ns = len(self.non_silent)
 
@@ -108,9 +129,13 @@ class MutationMap:
 
 		print("Longest consecutive run of silent", self.max_cs)
 
+		indels = len(self.insertions) + len(self.deletions)
+		similarity = (100.0 * (len(self.a) - (s + ns + indels))) / len(self.a)
+		print("{:.2f}% sequence similarity".format(similarity))
+
 	def graph(self):
 		cs, max_cs = 0, 0
-		total_s, total_ns = 0, 0
+		total_s, total_ns, total_ins, total_dels = 0, 0, 0, 0
 
 		with open("muts.txt", "wt") as fp:
 			with open("cumulative-muts.txt", "wt") as fp2:
@@ -124,11 +149,15 @@ class MutationMap:
 						max_cs = max(max_cs, cs)
 						cs = 0
 						total_ns += 1
+					elif i in self.insertions:
+						total_ins += 1
+					elif i in self.deletions:
+						total_dels += 1
 					else:
 						v = 0
 
 					print(v, file=fp)
-					print(total_s, total_ns, file=fp2)
+					print(total_s, total_ns, total_ins, total_dels, file=fp2)
 
 		print("Wrote muts.txt and cumulative-muts.txt")
 		self.max_cs = max_cs

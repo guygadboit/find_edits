@@ -3,4 +3,6 @@ set xlabel "nucleotide offset"
 set ylabel "count"
 
 plot "cumulative-muts.txt" using 1 title "silent" with lines, \
-	"cumulative-muts.txt" using 2 title "non-silent" with lines
+	"cumulative-muts.txt" using 2 title "non-silent" with lines, \
+	"cumulative-muts.txt" using 3 title "insertions" with lines, \
+	"cumulative-muts.txt" using 4 title "deletions" with lines
