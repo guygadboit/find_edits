@@ -100,13 +100,6 @@ class MutationMap:
 		return "\n".join(wrap(ret))
 
 	def summary(self):
-		print("{} silent codon changes, {} non-silent ones".format(
-			self.num_silent_codon_changes,
-			self.num_non_silent_codon_changes))
-
-		print("For each silent mutation the number of alternatives")
-		print(self.silent_alternatives)
-
 		print("{} silent mutations".format(len(self.silent)))
 		print(self._summarize_set(self.silent))
 
